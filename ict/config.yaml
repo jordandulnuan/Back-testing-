@@ -1,0 +1,94 @@
+# ICT intraday NQ win-rate backtest: every parameter lives here. Nothing is tuned on results.
+data:
+  source: proxy                 # proxy (HistData Nasdaq-100 / S&P 500 CFD 1m) | databento (NQ/ES futures files)
+  nq_path: data/nq_1m.parquet   # proxy files (built by prep_data.py)
+  es_path: data/es_1m.parquet
+  futures_dir: data/futures     # databento: *.dbn.zst / *.csv / *.parquet with ts_event, open, high, low, close, volume, symbol
+  nq_symbol: NQ                 # prefix used to pick NQ rows in the futures files
+  es_symbol: ES
+  roll_adjust: difference       # back-adjust a continuous futures series at each contract change
+  cache_dir: data/cache
+  tick: 0.25
+  use_30s: false                # only meaningful with 1s data
+  min_session_bars: 88          # a session day needs >= 88 of the 90 1m bars from 09:30 to 11:00
+
+session:
+  bias_time: "09:25"
+  entry_start: "09:30"
+  entry_end: "11:00"
+
+swings:
+  n: 3                          # N-bar pivot, confirmed N bars later
+
+bias:
+  timeframes: [D, 4h, 1h]
+  lookback: {D: 20, 4h: 30, 1h: 48}   # FVGs formed in the last N closed candles of each TF
+  threshold: 2                  # |score| >= threshold -> bias; else no-trade day
+  require_all_three: false      # variant: |score| == 3
+
+dol:
+  timeframes: [1h, 4h]
+  equal_tolerance: 5.0          # points; relative equal highs/lows are preferred
+
+levels:
+  timeframes: [3min, 5min, 15min, 30min, 1h, 4h]
+  types: {fvg: true, cisd: true, rb: true}
+  lookback_days: 5              # a level must have formed within the last 5 trading days
+  max_active: 3                 # only the 3 closest active levels can trigger
+  cisd_max_bars: 50             # CISD must confirm within 50 candles of the touch
+
+ifg:
+  timeframes: [1min, 2min, 3min, 4min, 5min]
+  rule: highest                 # highest | any | 1m
+
+execution:
+  entry: market                 # market | limit
+  limit_expiry_bars: 10         # 1m bars
+  stop: leg                     # leg (manipulation-leg extreme) | gap (IFG gap far edge)
+  max_risk: 60.0                # NQ points; larger stops are skipped and counted
+  target: 2.0                   # 1.0 | 1.5 | 2.0 | 3.0 | structural
+  structural_tf: 5min
+  structural_min_r: 1.0
+  structural_max_r: 3.0
+  breakeven: false
+  be_trigger_r: 1.0
+  hard_exit: "11:00"            # variant 11:30
+  max_trades_per_day: 2         # strict variant 1
+
+costs:
+  slippage_ticks: 1             # entry (market), stop exits, break-even stop, hard exit
+  commission_rt: 2.50           # $ per MNQ round turn
+  point_value: 2.0              # MNQ $/point
+
+classification:
+  time_exit_win_r: 1.0          # hard exit >= +1R net = win; (0, 1R) = scratch; <= 0 = loss
+
+split:
+  in_sample_fraction: 0.7       # chronological, by trading day
+
+# Variant grid for the full run (each combination is one summary row)
+grid:
+  entry: [market, limit]
+  stop: [leg, gap]
+  target: [1.0, 1.5, 2.0, 3.0, structural]
+  breakeven: [false, true]
+  ifg_rule: [highest, any, 1m]
+  level_types: [fvg_only, all]
+  max_trades_per_day: [2, 1]
+  hard_exit: ["11:00", "11:30"]
+  bias_rule: [threshold, all_three]
+
+main_variant:                   # the variant whose trades go to trades.csv
+  entry: market
+  stop: leg
+  target: 2.0
+  breakeven: false
+  ifg_rule: highest
+  level_types: all
+  max_trades_per_day: 2
+  hard_exit: "11:00"
+  bias_rule: threshold
+
+verify:                         # phase 1: one month, plotted trades
+  month: "2019-10"
+  n_plots: 6
