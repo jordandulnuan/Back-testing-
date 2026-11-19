@@ -7,7 +7,10 @@ fixed-UTC feed at 14:30/13:30. Output: results/tz_check.csv
 import os
 import pandas as pd
 
-df = pd.read_parquet("data/nq_1m.parquet")
+import sys
+path = sys.argv[1] if len(sys.argv) > 1 else "data/nq_1m.parquet"
+tag = sys.argv[2] if len(sys.argv) > 2 else "nq"
+df = pd.read_parquet(path)
 rng = df.high - df.low
 tod = df.index.hour * 60 + df.index.minute
 rows = []
@@ -24,6 +27,6 @@ for y in sorted(set(df.index.year)):
                          median_range_0830=s.get(510), spike_ratio_0930_vs_0929=s.get(570) / s.get(569)))
 out = pd.DataFrame(rows)
 os.makedirs("results", exist_ok=True)
-out.to_csv("results/tz_check.csv", index=False)
+out.to_csv("results/tz_check.csv" if tag == "nq" else f"results/tz_check_{tag}.csv", index=False)
 print(out.to_string(index=False))
 print("peak at 09:30 in", (out.peak_minute == "09:30").sum(), "of", len(out), "year-months")

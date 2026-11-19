@@ -10,9 +10,10 @@ import pandas as pd
 
 src = sys.argv[1] if len(sys.argv) > 1 else "data/x"
 out = sys.argv[2] if len(sys.argv) > 2 else "data/nq_1m.parquet"
+sym = sys.argv[3] if len(sys.argv) > 3 else "NSXUSD"   # SPXUSD for the S&P 500 (ES proxy)
 
 frames = []
-for f in sorted(glob.glob(f"{src}/DAT_ASCII_NSXUSD_M1_*.csv")):
+for f in sorted(glob.glob(f"{src}/DAT_ASCII_{sym}_M1_*.csv")):
     df = pd.read_csv(f, sep=";", header=None, names=["ts", "open", "high", "low", "close", "vol"])
     frames.append(df)
 df = pd.concat(frames, ignore_index=True)

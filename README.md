@@ -1,11 +1,120 @@
-# NQ intraday FVG backtests
+# NQ intraday backtests
 
-Two studies on the same 1-minute Nasdaq-100 data, sessions, costs and exit engine:
+Three studies on the same 1-minute data, costs and exit engine:
 
 1. **Original study** (`backtest.py`): 1H bias, then a 5m FVG retrace with a liquidity-draw confluence, 16 configurations.
 2. **Add-on confluence study** (`addons.py`): the baseline compared with OTE, IFVG (A/B) and rejection-block add-ons, 40 configurations, using a development window and a hold-out window.
+3. **NQ/ES SMT model** (`smt.py`): NDOG draw on liquidity, 1H displacement, 9:30 swing raid with SMT, 3m FVG inversion entry, 3 configurations.
 
-**Bottom line for both: nothing makes money after costs over 2010–2026, and no add-on beats the baseline after costs in a way the statistics support.**
+**Bottom line for all three: nothing is profitable after costs on 1 MNQ over 2010–2026, and nothing that looked good in 2010–2020 held up in the untouched 2021–2026 hold-out.**
+
+---
+
+## NQ/ES SMT model (`smt.py`)
+
+**Result: not profitable after costs.** All three variants lose money on 1 MNQ. Main: 83 trades, −$711. No break-even: −$233. No 2R minimum: −$889.
+- Average R per trade is positive (+0.08 to +0.43R), but that comes from three trades of +10 to +14R on 1–10 point stops. Without those three, the main run's total net R is −22R.
+- Dollar losses come from the wider-stop trades: stops above 10 points lose money in every variant except no-break-even's 20–40 point group.
+- The 2021–2026 hold-out fails in all variants: main is 34 trades with 2 wins, −0.57R per trade, −$790.
+- **Every variant has fewer than 300 trades (83–94) ⚠️**, so even the dev-period numbers are mostly noise. The t-stat on mean net R is +0.3 to +1.1.
+
+| Variant | Trades | Wins / Losses / BE | Win% (BE = non-win) | Win% (excl. BE) | Gross R | Net R (avg realized) | Exp $/trade | Net $ | PF (R / $) | Max DD (R / $) | Hold-out net R |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| main ⚠️ | 83 | 12 / 47 / 24 | 14.5% | 20.3% | +0.36 | +0.18 | −8.57 | −711 | 1.25 / 0.58 | 26.2 / 1,004 | −0.57 (34 trades) |
+| no break-even ⚠️ | 83 | 18 / 65 / 0 | 21.7% | 21.7% | +0.61 | +0.43 | −2.81 | −233 | 1.46 / 0.89 | 20.7 / 782 | −0.26 |
+| no 2R minimum ⚠️ | 94 | 13 / 54 / 27 | 13.8% | 19.4% | +0.26 | +0.08 | −9.46 | −889 | 1.11 / 0.53 | 29.5 / 1,142 | −0.59 |
+
+Trades flattened at 16:00 are counted as wins or losses by their net P&L (4–5 per variant).
+
+**The break-even rule (main):**
+- 24 of the 83 trades (29%) were stopped at break-even before reaching the DOL.
+- Run on the same entries without break-even, 5 of those 24 would have reached the DOL, 18 would have hit the original stop, and 1 would have been flattened at 16:00.
+- Those 24 exits made −4.4R with break-even and would have made +16.3R without it, because the 5 lost wins were worth more than the 18 saved losses.
+- Turning break-even off *lowers* the win rate counted with break-evens as non-wins (14.5% vs 21.7%) and improves net R by +0.25 per trade. The rule doesn't add edge here.
+
+**Each variant against main:**
+- **No break-even** does better on both R and dollars, but is still −$233.
+- **No 2R minimum** adds 11 trades, all worse, for −0.10R per trade and −$178.
+
+**Setup funnel, 4,069 trading days:**
+- **SMT:** a bearish SMT on 2,368 days and a bullish SMT on 2,126.
+- **NDOG target:** an NDOG edge on the right side of price on 1,409 / 1,037 of those days (short / long).
+- **1H displacement:** 181 / 125 passed.
+- **3m inversion:** 129 / 103 had one inside the setup window.
+- **Internal FVG:** only 59 / 35 had an unfilled 5m FVG between price and the DOL. This is the rule that removes the most.
+
+Full tables are in **[RESULTS_SMT.md](RESULTS_SMT.md)**: dev vs hold-out, significance and concentration, stop-size split, direction split, year by year and the funnel. Also saved: `results/smt/trades.csv`, the summary CSVs, and `results/smt/equity_and_yearly.png` (cumulative R, cumulative $ and net R per trade by year).
+
+### SMT data
+- **ES stand-in:** HistData `SPXUSD`, an S&P 500 index/CFD quote with the same limitations as the NQ data (no volume, no futures basis or rolls, starts Nov 2010, no 2006–2010). The Databento credential is still invalid: its username is the login name, not a `db-` key.
+- **Shared minutes:** NQ and ES share 87% of NQ's 1m timestamps. ES is missing about 20–30% of minutes in 2013–2017, mostly overnight.
+- **Timestamps:** `check_timezone.py` shows the 9:30 spike at 09:30–10:00 local in every January and July for **both** feeds. ES's single 08:30 peak is January 2011, a tie with 9:30 in a month when ET and EST are the same clock. **Both feeds are New York time with DST.**
+- **Daily close:** the feeds' daily close varies by year (16:14 in some years, quotes running to 17:00–17:29 in others), and real futures stop at 17:00. The NDOG uses the last 1m close before 17:00.
+
+### SMT assumptions (all fixed before any result; nothing was tuned)
+**Data**
+- Bars are labelled by their open time and are usable only at their close.
+- 3m, 5m, 15m and 1H bars are clock-aligned buckets built from 1m bars. 15m bars are built but no rule uses them.
+- **The SMT comparison uses only minutes present in both feeds**, so NQ and ES are measured over identical timestamps. Everything else (NDOG, 1H, 3m, internal 5m FVGs and all exits) uses the full NQ 1m series, so a missing ES minute can't hide an NQ stop or target.
+
+**Draw on liquidity (DOL)**
+- NDOG for trading day D: the last NQ 1m close before 17:00 on the previous trading day (it must be at or after 16:00) and the first 1m open from 18:00 to 18:59 that starts D. Monday's gap uses Friday's close.
+- Days without a valid NDOG are skipped: 366 of 4,069.
+- DOL = the nearest gap edge below price for shorts (above for longs). "Price" is the NQ 5m close of the SMT bar. A day with no edge on the right side has no trade.
+
+**1H displacement**
+- At the SMT bar's close, the last two *closed* clock-hour 1H NQ candles must both be bearish for shorts (bullish for longs).
+- Their combined body must be at least 1.5× the average body of the 14 1H candles before them. Overnight hours count.
+
+**9:30 swing and SMT**
+- The first 3-bar pivot on NQ 5m bars from 09:30: high[i] > high[i−1] and high[i] ≥ high[i+1]. Lows mirror this for longs.
+- The reference levels are NQ's and ES's highs **on that same pivot bar**.
+- Scanning starts at the pivot's confirmation bar (i+1). The first 5m bar where either index exceeds its own reference decides the outcome:
+  - exactly one index breaks its reference: SMT;
+  - both break on the same bar: no SMT for that side that day.
+- At most one SMT check per side per day, so at most one setup per side per day.
+- The SMT bar must close before 12:00. The setup window runs from the SMT bar's close to min(12:00, SMT close + 90 min).
+
+**3m entry**
+- Track bullish 3m NQ FVGs (bearish for longs) whose third candle closes after the SMT bar's close; their first candles may overlap the raid.
+- The entry candle is the first 3m candle that closes (inside the window) below the bottom of any FVG tracked so far (above the top for longs). Its close must come after the FVG was completed.
+- **Only the first inversion counts.** If it fails a later filter (internal FVG, R:R), there's no trade that side that day.
+- Short entry = that candle's close − 1 tick. Stop = the candle's high + 1 tick.
+
+**Internal liquidity**
+- At the entry candle's close, look at bullish 5m NQ FVGs (bearish for longs) that:
+  - are complete by then and at most 1440 5m bars old;
+  - have not been traded into since forming (no 1m low at or below their top);
+  - have their top below the entry candle's close and their bottom above the DOL.
+- The one with the highest top (nearest to price) is used. If none exists, there's no trade.
+
+**Break-even**
+- From the 1m bar *after* price first trades into that FVG (1m low ≤ its top), the stop moves to the entry price. Entry, stop exits and the flatten each carry 1 tick of slippage.
+- The break-even exit therefore costs about −0.5 to −0.6R after slippage and commission, and is counted as a break-even, not a loss.
+
+**Target and filters**
+- Take profit = the DOL, as a resting limit with no slippage.
+- Main run: (entry − DOL) ≥ 2 × (stop − entry).
+- The no-2R variant only requires the DOL to be beyond the entry.
+
+**Exits**
+- Simulated on 1m bars after the entry close. Stop and target in the same 1m bar counts as the stop. A stop gapped through fills at the bar open ± 1 tick.
+- Flatten at the close of the last 1m bar before 16:00, with 1 tick of slippage.
+- At most 2 trades per day (in practice one per side), one at a time. A later setup is skipped if the earlier trade is still open at its entry time.
+
+**Results**
+- Outcome: win = target hit; loss = original stop; break-even = break-even stop; 16:00 flatten = win or loss by the sign of net P&L.
+- R = net $ ÷ (planned risk points × $2). Gross R excludes slippage and commission.
+- PF is shown on R and on $. Max drawdown is peak-to-trough on cumulative R and on cumulative $.
+
+**Test design**
+- Dev = 2010-11 → 2020-12; hold-out = 2021-01 → 2026-11.
+- The dev-only run (`python3 smt.py --dev-only`) was used once to find data bugs:
+  - the NDOG originally required the feed's last bar of the day to be before 17:00, which dropped about half the days;
+  - the setup logic was moved off the common-minute series for everything except the SMT test.
+- Two dev trades were then checked by hand. The full run was made once and the hold-out is reported as it came out.
+
+**Configurations tried in this study:** 3, NY session only, all on the same entries apart from the 2R filter. Across all three studies that makes 59 backtests on this data.
 
 ---
 
@@ -224,4 +333,8 @@ python3 prep_data.py data/x data/nq_1m.parquet
 python3 check_timezone.py
 python3 backtest.py && python3 report_original.py      # original study (~1 min)
 python3 addons.py && python3 report_addons.py          # add-on study (~2 min)
+# SMT model also needs the S&P 500 feed: HistData SPXUSD ASCII M1 zips -> data/raw_spx, unzipped to data/x_spx
+python3 prep_data.py data/x_spx data/es_1m.parquet SPXUSD
+python3 check_timezone.py data/es_1m.parquet es
+python3 smt.py && python3 report_smt.py                # SMT model (~1 min)
 ```

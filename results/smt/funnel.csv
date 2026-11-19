@@ -1,0 +1,15 @@
+,count
+ndog_missing_days,366
+days,4069
+short_pivot,4067
+short_smt,2368
+long_pivot,4066
+long_smt,2126
+long_dol,1037
+long_bias,125
+long_inversion,103
+long_internal_fvg,35
+short_dol,1409
+short_bias,181
+short_inversion,129
+short_internal_fvg,59

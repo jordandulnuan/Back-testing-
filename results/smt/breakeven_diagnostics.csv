@@ -1,0 +1,9 @@
+,0
+main_trades,83.0
+be_exits,24.0
+be_exits_that_would_have_hit_DOL_without_BE,5.0
+be_exits_that_would_have_hit_original_stop,18.0
+be_exits_flattened_at_1600_without_BE,1.0
+be_exits_not_matched,0.0
+net_r_of_be_exits_main,-4.353768046912165
+net_r_same_trades_without_be,16.331539591322006
