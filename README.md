@@ -13,7 +13,7 @@ Three studies on the same 1-minute data, costs and exit engine:
 ## NQ/ES SMT model (`smt.py`)
 
 **Result: not profitable after costs.** All three variants lose money on 1 MNQ. Main: 83 trades, −$711. No break-even: −$233. No 2R minimum: −$889.
-- Average R per trade is positive (+0.08 to +0.43R), but that comes from three trades of +10 to +14R on 1–10 point stops. Without those three, the main run's total net R is −22R.
+- Average R per trade is positive (+0.08 to +0.43R), but that comes from three trades of +10 to +14R on 1.5–3.75 point stops, worth only $170 together. Without those three, the main run's total net R is −22R.
 - Dollar losses come from the wider-stop trades: stops above 10 points lose money in every variant except no-break-even's 20–40 point group.
 - The 2021–2026 hold-out fails in all variants: main is 34 trades with 2 wins, −0.57R per trade, −$790.
 - **Every variant has fewer than 300 trades (83–94) ⚠️**, so even the dev-period numbers are mostly noise. The t-stat on mean net R is +0.3 to +1.1.
