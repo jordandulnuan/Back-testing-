@@ -1,12 +1,133 @@
 # NQ intraday backtests
 
-Three studies on the same 1-minute data, costs and exit engine:
+Four studies on the same 1-minute data, costs and exit engine:
 
 1. **Original study** (`backtest.py`): 1H bias, then a 5m FVG retrace with a liquidity-draw confluence, 16 configurations.
 2. **Add-on confluence study** (`addons.py`): the baseline compared with OTE, IFVG (A/B) and rejection-block add-ons, 40 configurations, using a development window and a hold-out window.
 3. **NQ/ES SMT model** (`smt.py`): NDOG draw on liquidity, 1H displacement, 9:30 swing raid with SMT, 3m FVG inversion entry, 3 configurations.
+4. **1-2-3 method** (`onetwothree.py`): an HTF FVG arms the setup, 1m/2m/3m FVG inversions trigger the entry, 24 configurations.
 
-**Bottom line for all three: nothing is profitable after costs on 1 MNQ over 2010–2026, and nothing that looked good in 2010–2020 held up in the untouched 2021–2026 hold-out.**
+**Bottom line: none of the 83 configurations is profitable after costs in a way the statistics can tell apart from zero.**
+
+---
+
+## 1-2-3 method (`onetwothree.py`)
+
+**Does the win rate beat 50%? Only in the versions with the 15m FVG target. That's because the target is closer than the stop, and it is not an edge.**
+- The main version (daily FVG, 15m FVG target, any hour) wins **70.5%** of 1,796 trades (95% CI 68.4–72.6%, binomial p < 10⁻⁶⁰ against 50%).
+- But the average win is +0.42R ($73) and the average loss −1.03R (−$171), so it needs **71.0%** just to break even.
+- With fixed 1:1 targets the win rate is 49.7–51.9%, not distinguishable from 50% in any version.
+- With 1:2 and 1:3 it is 28–37%, close to each one's breakeven.
+
+**Is it profitable after costs? No.**
+- The main version nets **+$2,130 over 16 years on 1 MNQ** (+$1.19 per trade, −0.007R per trade, PF 1.02). That is t = 0.26, indistinguishable from zero.
+- It lost $4,704 in the development years (2010–2020) and made $6,834 in the 2021–2026 hold-out. Its max drawdown was $5,767.
+- The best of the 24 versions (daily FVG, 1:3 target, any hour) nets +$8,047 at t = 0.59. With 24 versions tried, a result that size is expected by chance alone.
+- 11 versions lose money and 13 make a little; none reaches |t| ≥ 2.
+- Gross R before costs is between −0.02 and +0.06 per trade in every version.
+
+| Version (zone · target · entry hours) | Trades | Win rate (95% CI) | Breakeven win rate | Expectancy R (net) | Net $ | Dev / hold-out net $ |
+|---|---|---|---|---|---|---|
+| **D · 15m · all (main)** | 1,796 | 70.5% (68.4–72.6) | 71.0% | −0.007 | +2,130 | −4,704 / +6,834 |
+| D · 15m · NY | 814 | 70.4% (67.2–73.4) | 71.2% | −0.011 | +969 | −689 / +1,658 |
+| D · 1R · all | 1,463 | 51.9% (49.3–54.4) | 51.5% | +0.007 | +4,291 | −1,374 / +5,665 |
+| D · 2R · all | 1,230 | 36.5% (33.9–39.2) | 36.3% | +0.005 | +667 | −1,630 / +2,297 |
+| D · 3R · all | 1,127 | 31.6% (28.9–34.4) | 30.8% | +0.025 | +8,047 | +466 / +7,581 |
+| 4H · 15m · all | 3,932 | 62.9% (61.4–64.4) | 66.0% | −0.049 | −6,603 | −4,514 / −2,089 |
+| D+4H · 15m · all | 4,454 | 65.0% (63.6–66.4) | 66.7% | −0.027 | −3,808 | −4,193 / +385 |
+
+All 24 versions, with CIs, binomial p-values, average win and loss in R and dollars, profit factor, max drawdown, the dev and hold-out tables, skips, the direction split and the year-by-year breakdown, are in **[RESULTS_123.md](RESULTS_123.md)**.
+
+Charts:
+- `results/onetwothree/win_rates.png`: win rate with its 95% CI against both 50% and the breakeven win rate.
+- `results/onetwothree/equity_grid.png`: cumulative net $ for every version.
+
+Trades are in `results/onetwothree/trades.csv`.
+
+**Versions tried:** 24 = 3 zone sets (daily, 4H, daily + 4H) × 4 targets (15m FVG, 1:1, 1:2, 1:3) × 2 entry windows (any hour, NY 9:30–16:00).
+- No version has fewer than 300 trades in total; the smallest is 626.
+- Three NY-only daily-zone versions have fewer than 300 trades **in the hold-out alone** ⚠️: 1R 254, 2R 236, 3R 230.
+
+**Skips, main version:** 2,303 triggers, of which:
+- 1,796 traded;
+- 64 skipped for having no unmitigated 15m FVG target;
+- 428 skipped because a trade was already open;
+- 15 skipped for the 2-per-day limit.
+
+There were 1,051 daily FVG zones in total. They armed 3,030 times (once per zone per day at most).
+
+### 1-2-3 data
+- **Source:** the same HistData Nasdaq-100 index 1m data as the other studies, 2010-11-14 → 2026-11-13. It has no futures rolls or basis and no volume (none of the rules need volume), and some quiet minutes are missing.
+- **Databento:** the saved credential is still invalid; its username is the login name, not a `db-` key.
+- **Timestamps:** rechecked with `check_timezone.py`. In all 32 Januarys and Julys the biggest bar falls between 09:30 and 10:00. In July the median 09:30 range is 7.9 points against 2.1 at 08:30. **New York time with DST confirmed.**
+- **Why R and dollars disagree:** the index rose from about 2,100 to 27,000, so daily-FVG stops are much larger in points in later years (median risk 57 points). Dollar results are therefore dominated by 2021–2026, which is why net $ can be positive while expectancy in R is slightly negative.
+
+### 1-2-3 assumptions (all fixed before any result; nothing was tuned)
+**Bars**
+- A trading day runs 18:00 → 17:00 ET.
+- The daily bar is that trading day. 4H bars are anchored at 18:00 (18/22/02/06/10/14). 2m, 3m, 5m and 15m bars are clock-aligned buckets of 1m bars.
+- Bars are labelled by their open time and usable only at their close. 5m bars are built but no rule uses them.
+
+**HTF zone**
+- A bearish FVG means candle 1's low is above candle 3's high, giving the zone [high₃, low₁]; bullish mirrors this. The zone is active from candle 3's close.
+- It is invalid from the close of the first later candle of the same timeframe that closes fully through it (shorts: close above the top), or after 120 bars of that timeframe: 120 daily bars for daily zones, **120 4H bars for 4H zones**.
+- In the daily + 4H version, each zone is handled on its own.
+
+**Arming**
+- On each trading day, a zone arms at the first 1m bar whose high reaches the zone bottom while the previous 1m close was below the bottom ("from below"). Longs mirror this.
+- The arm is known at that bar's close. At most one arm per zone per trading day, so at most one trade per zone per day.
+
+**The arm dies at the earliest of:**
+- 17:00 that trading day;
+- the zone becoming invalid;
+- any 1m bar trading to the stop level (zone top + 1 tick), since the trade would already be stopped.
+
+**Trigger**
+- On each of 1m, 2m and 3m, track bullish FVGs (bearish for longs) whose third candle closes after the arm.
+- An inversion is a later candle of the same timeframe closing below that FVG's bottom (above the top for longs).
+- The trigger is the first moment all three timeframes have had at least one inversion. Entry is at the open of the next 1m bar, which is the first bar on or after the trigger minute; if the data has a gap there, it's the next available bar.
+- Entry must come before the arm dies, otherwise there's no trade.
+- An FVG whose first candles came before the 17:00–18:00 break counts if its third candle closes after the arm.
+
+**Entry and stop**
+- Short entry = that 1m open − 1 tick of slippage. Longs mirror this.
+- Stop = the zone's far edge + 1 tick. A stop fill is 1 tick worse, or at the bar open ± 1 tick if price gaps through it.
+
+**15m target**
+- The near edge of the nearest unmitigated 15m FVG beyond entry. For shorts: a bullish 15m FVG whose top is below the entry bar's open, using its top; longs mirror this.
+- The FVG must be complete before entry and not traded into since then (no 1m low at or below its top). There is no age limit.
+- Only opposing-direction 15m FVGs qualify: a same-direction FVG below price has already been traded through.
+- If there's none, the trade is skipped and counted.
+
+**Fixed targets**
+- Entry ± k × (stop − entry) for k = 1, 2, 3.
+- Targets are resting limits with no slippage.
+
+**Limits**
+- At most 2 trades per trading day (counted on the arming day, which is also the entry day), one at a time across all zones.
+- A trigger that comes while a trade is open is skipped and counted.
+
+**Exits**
+- Stop and target in the same 1m bar counts as the stop.
+- If neither is hit by the close of the **5th trading day** (the entry day counts as day 1), close at that bar's close, ± 1 tick of slippage.
+- A time exit with net P&L > 0 is a win; zero or negative is a loss.
+- There is no break-even management.
+
+**NY version**
+- Only entries at 09:30–15:59 ET are taken. Exits follow the same rules, so a trade can still be held overnight for up to 5 days.
+
+**Statistics**
+- **Breakeven win rate** = average loss R ÷ (average win R + average loss R), using net R.
+- 95% CI: Wilson interval. **Binomial test:** exact, two-sided, against 50%.
+- "Profitable" means mean net $ per trade above zero at t ≥ 2. t-statistics treat trades as independent.
+
+**Test design**
+- Dev = 2010-11 → 2020-12; hold-out = 2021-01 → 2026-11.
+- The dev-only run (`python3 onetwothree.py --dev-only`) was used once to check for bugs, against an independent brute-force recomputation:
+  - Triggers on 200 trades: 196 matched. The other 4 were data gaps or cross-break FVGs, both explained above.
+  - Exits on 300 trades: all matched.
+  - Win flags on all dev trades: all matched.
+- The full run was then made once and the hold-out is reported as it came out.
 
 ---
 
@@ -337,4 +458,6 @@ python3 addons.py && python3 report_addons.py          # add-on study (~2 min)
 python3 prep_data.py data/x_spx data/es_1m.parquet SPXUSD
 python3 check_timezone.py data/es_1m.parquet es
 python3 smt.py && python3 report_smt.py                # SMT model (~1 min)
+pip install scipy
+python3 onetwothree.py && python3 report_123.py        # 1-2-3 method (~1 min)
 ```
