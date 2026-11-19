@@ -74,11 +74,11 @@ Charts:
    - **IFVG-A with the IFVG-edge stop** is the closest call: +0.09R per trade on NY 1:3 in the hold-out, t = 1.4 against zero.
    - **RB tap-and-close** is +0.10R per trade on NY 1:3 in the hold-out, but on only 92 trades with t = 0.5.
    - Both were level with or worse than the baseline in the development years. That is noise, not an edge.
-2. **The candle-wick stop is worse than the FVG-edge stop in every family and every combination.** In the development years this is −0.09 to −0.30R per trade, t from −2.1 to −7. The tighter stop doubles the cost per R and gets hit more often. The exception is OTE in NY, where the gap is small and not significant.
+2. **The candle-wick stop is worse than the FVG-edge stop in 31 of the 32 family/session/R:R/period cells.** In the development years the gap is −0.09 to −0.30R per trade (t from −1.0 to −7.0). The only exception is OTE NY 1:3 in the hold-out (+0.06R, t = 0.4). The tighter stop roughly doubles the cost per R and gets hit more often.
 3. **OTE** cuts trades by about 90% and leaves expectancy unchanged within noise, and the hold-out has too few trades to judge.
-4. **IFVG-B** is essentially the baseline: 82% of baseline FVGs qualify, and the differences are within ±0.02R.
+4. **IFVG-B** is essentially the baseline: 69% of baseline FVGs qualify, and the differences are within ±0.02R.
 5. **Rejection block with a limit entry is clearly worse**: −0.23 to −0.38R per trade in the hold-out, t from −3 to −4. The blocks are small, so stops are 1–2 points in the dev years, and a fill on touch tends to be followed by a run straight through the wick.
-6. **Stop size drives everything.** Across variants, net R improves steadily from stops of 2.5 points or less (−0.5 to −1.3R) to stops over 20 points (about 0R). The hold-out looks better than the dev period mainly because the index is about 3× higher, so one tick plus commission is a much smaller share of the stop. Gross R before costs is between −0.05 and +0.15 per trade in every cell. The setups have no edge before costs, so they can't have one after.
+6. **Stop size drives everything.** Across variants, net R improves steadily from stops of 2.5 points or less (−0.5 to −1.3R) to stops over 20 points (about 0R). The hold-out looks better than the dev period mainly because the index is about 3× higher, so one tick plus commission is a much smaller share of the stop. Gross R before costs is between −0.10 and +0.17 per trade in every dev and hold-out cell (RB limit: −0.30 to −0.03). The setups have no edge before costs, so they can't have one after.
 
 ### Assumptions (all fixed before any result was seen; nothing was tuned)
 **Data and clock**
