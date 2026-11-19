@@ -76,13 +76,13 @@ def find_fvgs(bars):
 
 
 @njit(cache=True)
-def _fill_times(t1m, lo, hi, start_idx, direction, bot, top, max_minutes):
+def _fill_times(t1m, lo, hi, start_idx, direction, bot, top, limit_t):
     """First 1m bar (open time) at/after start_idx that trades fully through the gap."""
     n = len(t1m)
     res = np.full(len(start_idx), np.iinfo(np.int64).max)
     for k in range(len(start_idx)):
         s = start_idx[k]
-        limit = t1m[s] + max_minutes if (max_minutes > 0 and s < n) else np.iinfo(np.int64).max
+        limit = limit_t[k]
         for j in range(s, n):
             if t1m[j] > limit:
                 break
@@ -97,13 +97,20 @@ def _fill_times(t1m, lo, hi, start_idx, direction, bot, top, max_minutes):
     return res
 
 
-def add_fill_times(fvg, m1, max_age=None):
+def add_fill_times(fvg, m1, max_age=None, bars=None):
+    """fill_t = first 1m time the gap is traded through. With max_age (in bars of `bars`), the scan
+    stops at the close of bar (creation bar + max_age): the engine never looks at the zone after that,
+    so the expiry and the fill scan use the same clock (bar count, not calendar minutes)."""
     t = m1.index.values.astype(np.int64)
     start = np.searchsorted(t, fvg["valid_from"].values.astype(np.int64))
-    max_minutes = np.int64(max_age * 5 * M) if max_age else np.int64(0)
+    if max_age:
+        t1b = bars["t1"].values.astype(np.int64)
+        limit_t = t1b[np.minimum(fvg["bar"].values + max_age, len(t1b) - 1)]
+    else:
+        limit_t = np.full(len(fvg), np.iinfo(np.int64).max)
     fvg["fill_t"] = _fill_times(t, m1["low"].values, m1["high"].values, start,
                                 fvg["dir"].values.astype(np.int64), fvg["bot"].values, fvg["top"].values,
-                                max_minutes)
+                                limit_t.astype(np.int64))
     return fvg
 
 
@@ -178,7 +185,7 @@ def build_context(m1):
     m5_levels = np.vstack(levels).T          # (n5, 6) prev 1H/4H/D high & low
 
     # ---- FVGs
-    f5 = add_fill_times(find_fvgs(m5), m1, max_age=FVG5_MAX_AGE_BARS)
+    f5 = add_fill_times(find_fvgs(m5), m1, max_age=FVG5_MAX_AGE_BARS, bars=m5)
     htf_f = []
     for name, b in (("1H", h1), ("4H", h4), ("D", d1)):
         f = add_fill_times(find_fvgs(b), m1)
