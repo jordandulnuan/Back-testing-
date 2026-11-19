@@ -23,7 +23,7 @@ Four studies on the same 1-minute data, costs and exit engine:
 - The main version nets **+$2,130 over 16 years on 1 MNQ** (+$1.19 per trade, −0.007R per trade, PF 1.02). That is t = 0.26, indistinguishable from zero.
 - It lost $4,704 in the development years (2010–2020) and made $6,834 in the 2021–2026 hold-out. Its max drawdown was $5,767.
 - The best of the 24 versions (daily FVG, 1:3 target, any hour) nets +$8,047 at t = 0.59. With 24 versions tried, a result that size is expected by chance alone.
-- 11 versions lose money and 13 make a little; none reaches |t| ≥ 2.
+- 14 versions lose money and 10 make a little; none reaches |t| ≥ 2.
 - Gross R before costs is between −0.02 and +0.06 per trade in every version.
 
 | Version (zone · target · entry hours) | Trades | Win rate (95% CI) | Breakeven win rate | Expectancy R (net) | Net $ | Dev / hold-out net $ |
